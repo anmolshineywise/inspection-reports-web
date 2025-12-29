@@ -44,7 +44,7 @@ app.get('/reports/:id', (req, res) => {
 app.get('/vessel/:imo', async (req, res) => {
   const imo = req.params.imo
   if (!imo) return res.status(400).json({ error: 'Missing IMO' })
-  const url = `https://vms-data-processing-jgjm9r.5sc6y6-3.usa-e2.cloudhub.io/api/vessel/${encodeURIComponent(imo)}`
+  const url = `https://vms-data-processing-jgjm9r.5sc6y6-4.usa-e2.cloudhub.io/api/vessel/${encodeURIComponent(imo)}`
   console.log(`[proxy] /vessel/${imo} -> ${url}`)
   try {
     // add a timeout to avoid hanging if upstream is slow or unreachable
