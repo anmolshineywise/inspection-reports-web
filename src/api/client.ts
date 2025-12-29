@@ -105,7 +105,8 @@ export async function fetchVesselByImo(imo: string): Promise<Report> {
   }
 
   // Use the local proxy only (previous working behavior). This avoids CORS and ensures consistent responses.
-  const proxyUrl = `/vessel/${encodeURIComponent(imo)}`
+  // On Vercel the serverless function lives under `/api/vessel/:imo` so call that path in production.
+  const proxyUrl = `/api/vessel/${encodeURIComponent(imo)}`
 
   // 1) Try proxy first (Vite proxy or local server)
   try {
@@ -131,25 +132,31 @@ export async function fetchVesselByImo(imo: string): Promise<Report> {
       throw new Error(`PROXY_ERROR:${pres.status}:${bodyText}`)
     }
   } catch (proxyErr: any) {
-    console.warn('Proxy attempt failed, trying direct external fetch:', proxyErr?.message || proxyErr)
+    console.warn('Proxy attempt failed', proxyErr?.message || proxyErr)
 
-    // 2) Attempt direct fetch to external URL as a fallback
-    const externalUrl = `https://vms-data-processing-jgjm9r.5sc6y6-4.usa-e2.cloudhub.io/api/vessel/${encodeURIComponent(imo)}`
-    try {
-      const res = await fetch(externalUrl, { headers: { Accept: 'application/json' } })
-      if (!res.ok) {
-        let maybe = ''
-        try { maybe = JSON.stringify(await res.json()) } catch (_) { maybe = await res.text().catch(() => '') }
-        throw new Error(`EXTERNAL_ERROR:${res.status}:${maybe}`)
+    // In development only: attempt direct fetch to external URL as a fallback to aid debugging.
+    if (import.meta.env.DEV) {
+      console.warn('Attempting direct external fetch (DEV only)')
+      const externalUrl = `https://vms-data-processing-jgjm9r.5sc6y6-4.usa-e2.cloudhub.io/api/vessel/${encodeURIComponent(imo)}`
+      try {
+        const res = await fetch(externalUrl, { headers: { Accept: 'application/json' } })
+        if (!res.ok) {
+          let maybe = ''
+          try { maybe = JSON.stringify(await res.json()) } catch (_) { maybe = await res.text().catch(() => '') }
+          throw new Error(`EXTERNAL_ERROR:${res.status}:${maybe}`)
+        }
+        const data = await res.json()
+        if (data && data.status === 'NOT_FOUND') throw new Error(`NO_DATA:${data.message || 'No inspection found'}`)
+        return mapToReport(data)
+      } catch (extErr: any) {
+        const pmsg = proxyErr?.message || String(proxyErr)
+        const emsg = extErr?.message || String(extErr)
+        throw new Error(`Failed to retrieve vessel data. Proxy error: ${pmsg}. External error: ${emsg}`)
       }
-      const data = await res.json()
-      if (data && data.status === 'NOT_FOUND') throw new Error(`NO_DATA:${data.message || 'No inspection found'}`)
-      return mapToReport(data)
-    } catch (extErr: any) {
-      // both attempts failed — surface combined message
-      const pmsg = proxyErr?.message || String(proxyErr)
-      const emsg = extErr?.message || String(extErr)
-      throw new Error(`Failed to retrieve vessel data. Proxy error: ${pmsg}. External error: ${emsg}`)
     }
+
+    // In production, fail fast and avoid triggering browser CORS errors by trying the external URL.
+    const pmsg = proxyErr?.message || String(proxyErr)
+    throw new Error(`Failed to retrieve vessel data via proxy (production). Proxy error: ${pmsg}`)
   }
 }
