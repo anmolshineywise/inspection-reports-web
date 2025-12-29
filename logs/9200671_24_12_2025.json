@@ -1,0 +1,88 @@
+{
+    "imo": "9200671",
+    "vessel_name": "MV Test Ship",
+    "inspector_name": "Inspector",
+    "date": "24_12_2025",
+    "categories": [
+        {
+            "category": "HULL",
+            "inspections": [
+                {
+                    "inspection_detail_id": "f9d07869-c6b7-4e4e-b727-71b65463262c",
+                    "subsection": "Propeller",
+                    "details": "looking fine",
+                    "action": "no action required",
+                    "rating": "1",
+                    "due_after_weeks": "0",
+                    "updated_at": "2025-12-24T20:40:24.803840",
+                    "images": [
+                        "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1766589197120_Propeller_1.jpg",
+                        "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1766589198701_Propeller_2.jpg"
+                    ]
+                },
+                {
+                    "inspection_detail_id": "29aee221-6049-40df-b445-353dc6ff7c55",
+                    "subsection": "Rudder",
+                    "details": "dented and scratched",
+                    "action": "repair",
+                    "rating": "2",
+                    "due_after_weeks": "2",
+                    "updated_at": "2025-12-24T20:41:05.914390",
+                    "images": [
+                        "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1766589199063_Rudder_1.jpg",
+                        "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1766589199465_Rudder_2.jpg"
+                    ]
+                }
+            ]
+        },
+        {
+            "category": "TANKS",
+            "inspections": [
+                {
+                    "inspection_detail_id": "f74dac7f-3b1e-4be5-8836-fe094e08153a",
+                    "subsection": "Deep tanks",
+                    "details": "no water in tank",
+                    "action": "fill water",
+                    "rating": "3",
+                    "due_after_weeks": "4",
+                    "updated_at": "2025-12-24T20:41:58.280754",
+                    "images": [
+                        "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1766589217079_Deep_tanks_1.jpg",
+                        "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1766589217401_Deep_tanks_2.jpg"
+                    ]
+                },
+                {
+                    "inspection_detail_id": "2f14d7d0-cf2f-4193-81d8-09d21b2c89da",
+                    "subsection": "Top side tanks",
+                    "details": "very poor quality and it is not working",
+                    "action": "replacement",
+                    "rating": "N/A",
+                    "due_after_weeks": "5",
+                    "updated_at": "2025-12-24T20:43:08.500975",
+                    "images": [
+                        "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1766589217793_Top_side_tanks_1.jpg",
+                        "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1766589218309_Top_side_tanks_2.jpg"
+                    ]
+                }
+            ]
+        },
+        {
+            "category": "MAIN ENGINE SPARES",
+            "inspections": [
+                {
+                    "inspection_detail_id": "460b3a31-6899-4be8-8e4b-6f79f7ba8d12",
+                    "subsection": "Pistons",
+                    "details": "pistons are jam need to change",
+                    "action": "piston change",
+                    "rating": "3",
+                    "due_after_weeks": "4",
+                    "updated_at": "2025-12-24T21:11:54.603111",
+                    "images": [
+                        "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1766590939740_Pistons_1.jpg",
+                        "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1766590940968_Pistons_2.jpg"
+                    ]
+                }
+            ]
+        }
+    ]
+}

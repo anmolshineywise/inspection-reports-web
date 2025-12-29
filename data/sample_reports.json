@@ -1,0 +1,58 @@
+{
+  "total": 1,
+  "limit": 10,
+  "offset": 0,
+  "results": [
+    {
+      "reportId": "rep_2025_001",
+      "imo": "1234567",
+      "vesselName": "MV Example",
+      "flag": "Liberia",
+      "inspectionDate": "2025-11-05",
+      "overallRating": 3.5,
+      "summary": "Safety and structure - some deficiencies",
+      "thumbnailUrl": "https://via.placeholder.com/120"
+    }
+  ],
+  "reports": {
+    "rep_2025_001": {
+      "reportId": "rep_2025_001",
+      "imo": "1234567",
+      "vesselName": "MV Example",
+      "flag": "Liberia",
+      "owner": "Example Shipping Co.",
+      "inspectionDate": "2025-11-05",
+      "inspector": "Inspector Name",
+      "overallRating": 3.5,
+      "categories": [
+        {
+          "categoryId": "cat_01",
+          "name": "Safety",
+          "rating": 3,
+          "subsections": [
+            {
+              "subsectionId": "sub_01_01",
+              "name": "Fire Safety",
+              "rating": 2,
+              "details": "Fire extinguishers partially missing. Drill records incomplete.",
+              "images": [
+                { "url": "https://via.placeholder.com/400x240", "caption": "Missing extinguisher on deck 3" }
+              ]
+            },
+            {
+              "subsectionId": "sub_01_02",
+              "name": "Life Saving Appliances",
+              "rating": 4,
+              "details": "Lifeboats inspected and in good condition.",
+              "images": []
+            }
+          ]
+        }
+      ],
+      "documents": [
+        { "name": "Full PDF", "url": "https://example.com/reports/rep_2025_001/full-report.pdf" }
+      ],
+      "notes": "Follow-up inspection requested within 60 days."
+    }
+  }
+}
