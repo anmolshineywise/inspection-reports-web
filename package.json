@@ -7,6 +7,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "mock:server": "node server/index.js",
+    "send:update": "node scripts/send_update.js",
     "start": "vite",
     "test": "vitest",
     "test:watch": "vitest --watch",

@@ -18,13 +18,14 @@ export async function getReport(reportId: string): Promise<Report> {
   return request(`/reports/${reportId}`)
 }
 
-export async function saveReport(reportId: string, payload: any): Promise<{ success: boolean; filename?: string }> {
+export async function saveReport(reportId: string, payload: any): Promise<any> {
+  // Use local API for saves to avoid browser CORS issues; the local server forwards to Cloudhub.
   const res = await fetch(`${BASE}/reports/${encodeURIComponent(reportId)}`, {
-    method: 'POST',
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(payload)
   })
-  if (!res.ok) throw new Error(`API Error: ${res.status}`)
+  if (!res.ok) throw new Error(`Local API Error: ${res.status}`)
   return res.json()
 }
 
