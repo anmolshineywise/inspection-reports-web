@@ -28,6 +28,8 @@ export default function ReportPage() {
   const [status, setStatus] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  const [externalResult, setExternalResult] = useState<{ success: boolean; status?: number; body?: any; error?: string; payload?: any } | null>(null)
+  const [showPayload, setShowPayload] = useState(false)
 
   useEffect(() => {
     if (report) {
@@ -174,19 +176,46 @@ export default function ReportPage() {
     if (!edited || !report) return
     setSaving(true)
     setSaveMsg(null)
-    const payload = {
-      report: edited,
-      status,
-      savedAt: new Date().toISOString(),
+
+    // Build payload matching the Cloudhub expected format
+    const payload: any = {
+      reportId: edited.reportId,
+      imo: edited.imo,
+      vesselName: edited.vesselName,
+      inspectionDate: edited.inspectionDate,
+      inspector: edited.inspector,
+      overallRating: edited.overallRating,
+      categories: edited.categories
     }
+
     try {
       const res = await saveReport(report.reportId, payload)
-      setSaveMsg(`Saved as ${res.filename}`)
+      // The server returns { success: true, report: ..., external: {...} }
+      // Save external result into state so UI can surface it directly
+      const ext = res && res.external ? res.external : null
+      if (ext) {
+        setExternalResult({ success: !!ext.success, status: ext.status, body: ext.body, error: ext.error, payload: ext.payload })
+      } else {
+        setExternalResult(null)
+      }
+
+      // Friendly message for the user
+      if (res && res.filename) {
+        setSaveMsg(`Saved as ${res.filename}`)
+      } else if (ext) {
+        setSaveMsg(ext.success ? 'Saved and forwarded to external API' : `Saved locally; external forward failed: ${ext.error || ext.body || ext.status}`)
+      } else {
+        setSaveMsg('Saved')
+      }
+
+      console.debug('Save response', res)
+
       // reflect saved changes in the UI and exit edit mode
       setReport(edited)
       setEditMode(false)
     } catch (err: any) {
       setSaveMsg(`Failed: ${err?.message || String(err)}`)
+      setExternalResult({ success: false, error: err?.message || String(err) })
     } finally {
       setSaving(false)
     }
@@ -258,6 +287,22 @@ export default function ReportPage() {
           </button>
 
           {saveMsg && <div style={{ color: 'green' }}>{saveMsg}</div>}
+
+          {externalResult && (
+            <div style={{ marginLeft: 12, minWidth: 260 }}>
+              {externalResult.success ? (
+                <div style={{ color: 'green' }}>✅ External: {externalResult.status} {externalResult.body?.status ? `- ${externalResult.body.status}` : ''}</div>
+              ) : (
+                <div style={{ color: 'red' }}>⚠️ External forward failed: {externalResult.error || externalResult.status || (externalResult.body && JSON.stringify(externalResult.body))}</div>
+              )}
+
+              <button className="ghost-btn" onClick={() => setShowPayload(s => !s)} style={{ marginTop: 6 }}>{showPayload ? 'Hide forwarded JSON' : 'Show forwarded JSON'}</button>
+
+              {showPayload && (
+                <pre style={{ maxHeight: 300, overflow: 'auto', background: '#f6f6f6', padding: 8, borderRadius: 4, marginTop: 8 }}>{JSON.stringify(externalResult.payload || {}, null, 2)}</pre>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -300,18 +345,35 @@ export default function ReportPage() {
                                   <div className="label">Rating</div>
                                   <div className="value">
                                     {editMode ? (
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        max={5}
-                                        value={cur.rating ?? ''}
-                                        onChange={(e) => setSubField(cat.categoryId, sub.subsectionId, 'rating', e.target.value ? Number(e.target.value) : undefined)}
-                                      />
+                                      <select value={cur.rating ?? ''} onChange={(e) => setSubField(cat.categoryId, sub.subsectionId, 'rating', e.target.value || undefined)}>
+                                        <option value="">Select</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="N/A">N/A</option>
+                                      </select>
                                     ) : (
                                       cur.rating ?? "-"
                                     )}
                                   </div>
                                 </div>
+
+                                <div className="action-row">
+                                  <div className="label">Status</div>
+                                  <div className="value">
+                                    {editMode ? (
+                                      <select value={(cur as any).status || ''} onChange={(e) => setSubField(cat.categoryId, sub.subsectionId, 'status', e.target.value || undefined)}>
+                                        <option value="">Select status</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="complete">Complete</option>
+                                        <option value="requires-follow-up">Requires Follow-up</option>
+                                      </select>
+                                    ) : (
+                                      (cur as any).status || 'pending'
+                                    )}
+                                  </div>
+                                </div>
+
                                 <div className="action-row">
                                   <div className="label">Due date</div>
                                   <div className="value">
@@ -325,7 +387,7 @@ export default function ReportPage() {
                                       (cur as any).dueDate || computeDueDate(report.inspectionDate, (sub as any).due_after_weeks)
                                     )}
                                   </div>
-                                </div>
+                                </div> 
                                 <div className="action-row">
                                   <div className="label">Required Action</div>
                                   <div className="value">

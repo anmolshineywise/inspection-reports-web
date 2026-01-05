@@ -17,7 +17,8 @@ export interface ImageRef {
 export interface Subsection {
   subsectionId: string
   name: string
-  rating?: number
+  rating?: number | string
+  status?: string
   details?: string
   images?: ImageRef[]
   // fields mapped from VMS payload
@@ -29,7 +30,8 @@ export interface Subsection {
 export interface Category {
   categoryId: string
   name: string
-  rating?: number
+  rating?: number | string
+  status?: string
   subsections?: Subsection[]
 }
 
@@ -42,7 +44,8 @@ export interface Report {
   inspectionDate?: string
   inspector?: string
   overallRating?: number
+  status?: string
   categories?: Category[]
   documents?: { name: string; url: string }[]
   notes?: string
-}
+} 

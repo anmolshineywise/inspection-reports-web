@@ -44,7 +44,7 @@ app.get('/reports/:id', (req, res) => {
 app.get('/vessel/:imo', async (req, res) => {
   const imo = req.params.imo
   if (!imo) return res.status(400).json({ error: 'Missing IMO' })
-  const url = `https://vms-data-processing-jgjm9r.5sc6y6-3.usa-e2.cloudhub.io/api/vessel/${encodeURIComponent(imo)}`
+  const url = `https://vms-data-processing-jgjm9r.5sc6y6-4.usa-e2.cloudhub.io/api/vessel/${encodeURIComponent(imo)}`
   console.log(`[proxy] /vessel/${imo} -> ${url}`)
   try {
     // add a timeout to avoid hanging if upstream is slow or unreachable
@@ -111,6 +111,158 @@ app.post('/reports/:id', (req, res) => {
   } catch (err) {
     console.error('Error saving report', err)
     return res.status(500).json({ error: 'Failed to save report', detail: String(err) })
+  }
+})
+
+// Update report in DB (data/sample_reports.json)
+app.put('/reports/:id', async (req, res) => {
+  const id = req.params.id
+  if (!req.body) return res.status(400).json({ error: 'Missing body' })
+  const payload = req.body
+
+  // Ensure reportId matches the URL id (set it if missing)
+  payload.reportId = payload.reportId || id
+  if (payload.reportId !== id) return res.status(400).json({ error: 'reportId mismatch' })
+
+  // Merge into in-memory DB
+  db.reports = db.reports || {}
+  db.reports[id] = payload
+
+  // Upsert summary in results array
+  db.results = db.results || []
+  const idx = db.results.findIndex(r => r.reportId === id)
+  const summary = {
+    reportId: payload.reportId,
+    imo: payload.imo,
+    vesselName: payload.vesselName,
+    flag: payload.flag,
+    inspectionDate: payload.inspectionDate,
+    overallRating: payload.overallRating,
+    summary: payload.notes ? (typeof payload.notes === 'string' ? payload.notes.substring(0, 140) : undefined) : undefined,
+    thumbnailUrl: (payload.documents && payload.documents[0] && payload.documents[0].url) || payload.thumbnailUrl
+  }
+  if (idx >= 0) {
+    db.results[idx] = { ...db.results[idx], ...summary }
+  } else {
+    db.results.push(summary)
+  }
+  db.total = db.results.length
+
+  // Persist DB to file
+  try {
+    fs.writeFileSync(DATA_PATH, JSON.stringify(db, null, 2), 'utf-8')
+    console.log(`Updated report ${id} in ${DATA_PATH}`)
+
+    // Forward update to external API (optional override via EXTERNAL_UPDATE_URL env var)
+    const externalUpdateUrl = process.env.EXTERNAL_UPDATE_URL || 'https://vms-data-processing-jgjm9r.5sc6y6-4.usa-e2.cloudhub.io/api/update'
+    console.log('[external-update] forwarding to', externalUpdateUrl)
+
+    // Normalize payload to expected Cloudhub format (support clients that send { report: ... })
+    function normalizePayload(p) {
+      const toStringRating = (v) => {
+        if (v === undefined || v === null) return undefined
+        if (typeof v === 'string') return v
+        if (typeof v === 'number') return String(v)
+        return undefined
+      }
+
+      let out = p && p.report ? { ...p.report, ...p } : { ...p }
+      // Remove nested wrapper
+      if (out.report) delete out.report
+      // Prefer savedAt -> updated_at
+      out.updated_at = out.updated_at || out.savedAt || new Date().toISOString()
+      out.reportId = out.reportId || id
+
+      // Ensure required top-level keys exist (set sensible defaults if missing)
+      const overallRating = out.overallRating
+      const topStatus = out.status || 'pending'
+
+      const categories = (out.categories || []).map((cat, cidx) => {
+        const rating = cat && (cat.rating !== undefined && cat.rating !== null) ? toStringRating(cat.rating) : undefined
+        const status = (cat && cat.status) || 'pending'
+        const subsections = (cat && cat.subsections || []).map((sub, sidx) => ({
+          subsectionId: sub && sub.subsectionId || `sub-${cidx}-${sidx}`,
+          name: sub && sub.name,
+          rating: sub && (sub.rating !== undefined && sub.rating !== null) ? toStringRating(sub.rating) : undefined,
+          status: (sub && sub.status) || 'pending',
+          details: sub && sub.details,
+          action: sub && sub.action,
+          due_after_weeks: sub && sub.due_after_weeks,
+          updated_at: sub && sub.updated_at
+        }))
+        return {
+          categoryId: cat && cat.categoryId || `cat-${cidx}`,
+          name: cat && cat.name,
+          rating,
+          status,
+          subsections
+        }
+      })
+
+      return {
+        reportId: out.reportId,
+        imo: out.imo,
+        vesselName: out.vesselName,
+        inspectionDate: out.inspectionDate,
+        inspector: out.inspector,
+        overallRating,
+        status: topStatus,
+        categories,
+        updated_at: out.updated_at
+      }
+    }
+
+    const forwardPayload = normalizePayload(payload)
+
+    // Ensure logs directory exists
+    try { fs.mkdirSync(path.join(__dirname, '..', 'logs'), { recursive: true }) } catch (_) {}
+
+    const safeStamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const forwardLogFile = path.join(__dirname, '..', 'logs', `forward_${id}_${safeStamp}.json`)
+    fs.writeFileSync(forwardLogFile, JSON.stringify({ attemptedAt: new Date().toISOString(), url: externalUpdateUrl, payload: forwardPayload }, null, 2), 'utf-8')
+
+    try {
+      const controller = new AbortController()
+      const timeoutMs = 8000
+      const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
+      const upr = await fetch(externalUpdateUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(forwardPayload),
+        signal: controller.signal
+      })
+
+      clearTimeout(timeout)
+
+      let uprBody
+      try { uprBody = await upr.json() } catch (_) { uprBody = await upr.text().catch(() => '') }
+
+      // Append result to the forward log file
+      try {
+        const result = { completedAt: new Date().toISOString(), status: upr.status, body: uprBody }
+        const existing = JSON.parse(fs.readFileSync(forwardLogFile, 'utf-8'))
+        fs.writeFileSync(forwardLogFile, JSON.stringify({ ...existing, result }, null, 2), 'utf-8')
+        fs.appendFileSync(path.join(__dirname, '..', 'logs', 'external_updates.log'), JSON.stringify({ timestamp: new Date().toISOString(), reportId: id, url: externalUpdateUrl, status: upr.status, success: upr.ok }) + '\n')
+      } catch (logErr) {
+        console.error('[external-update] failed to write forward log', String(logErr))
+      }
+
+      if (!upr.ok) {
+        console.error('[external-update] non-ok status', upr.status, uprBody)
+        return res.json({ success: true, report: payload, external: { success: false, status: upr.status, body: uprBody, payload: forwardPayload } })
+      }
+
+      console.log('[external-update] success', upr.status)
+      return res.json({ success: true, report: payload, external: { success: true, status: upr.status, body: uprBody, payload: forwardPayload } })
+    } catch (extErr) {
+      console.error('[external-update] error', String(extErr))
+      try { fs.appendFileSync(path.join(__dirname, '..', 'logs', 'external_updates.log'), JSON.stringify({ timestamp: new Date().toISOString(), reportId: id, url: externalUpdateUrl, error: String(extErr) }) + '\n') } catch (_) {}
+      return res.json({ success: true, report: payload, external: { success: false, error: String(extErr), payload: forwardPayload } })
+    }
+  } catch (err) {
+    console.error('Error updating DB file', err)
+    return res.status(500).json({ error: 'Failed to write DB file', detail: String(err) })
   }
 })
 

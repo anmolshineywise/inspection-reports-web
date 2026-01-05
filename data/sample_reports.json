@@ -1,5 +1,5 @@
 {
-  "total": 1,
+  "total": 3,
   "limit": 10,
   "offset": 0,
   "results": [
@@ -12,6 +12,22 @@
       "overallRating": 3.5,
       "summary": "Safety and structure - some deficiencies",
       "thumbnailUrl": "https://via.placeholder.com/120"
+    },
+    {
+      "reportId": "rep_2025_002",
+      "imo": "9200671",
+      "vesselName": "MV Sample Vessel",
+      "flag": "Bahamas",
+      "inspectionDate": "2025-12-24",
+      "overallRating": 4.2,
+      "summary": "Good overall, minor maintenance issues",
+      "thumbnailUrl": "https://via.placeholder.com/120?text=9200671"
+    },
+    {
+      "reportId": "vms-9200671-2025-12-29",
+      "imo": "9200671",
+      "vesselName": "MV Test Ship",
+      "inspectionDate": "2025-12-29"
     }
   ],
   "reports": {
@@ -36,7 +52,10 @@
               "rating": 2,
               "details": "Fire extinguishers partially missing. Drill records incomplete.",
               "images": [
-                { "url": "https://via.placeholder.com/400x240", "caption": "Missing extinguisher on deck 3" }
+                {
+                  "url": "https://via.placeholder.com/400x240",
+                  "caption": "Missing extinguisher on deck 3"
+                }
               ]
             },
             {
@@ -50,9 +69,116 @@
         }
       ],
       "documents": [
-        { "name": "Full PDF", "url": "https://example.com/reports/rep_2025_001/full-report.pdf" }
+        {
+          "name": "Full PDF",
+          "url": "https://example.com/reports/rep_2025_001/full-report.pdf"
+        }
       ],
       "notes": "Follow-up inspection requested within 60 days."
+    },
+    "rep_2025_002": {
+      "reportId": "rep_2025_002",
+      "imo": "9200671",
+      "vesselName": "MV Sample Vessel",
+      "flag": "Bahamas",
+      "owner": "Sample Shipping Ltd.",
+      "inspectionDate": "2025-12-24",
+      "inspector": "Inspector Jane",
+      "overallRating": 4.2,
+      "categories": [
+        {
+          "categoryId": "cat_01",
+          "name": "Safety",
+          "rating": 4,
+          "subsections": [
+            {
+              "subsectionId": "sub_01_01",
+              "name": "Fire Safety",
+              "rating": 4,
+              "details": "Fire prevention systems in place and functional.",
+              "images": []
+            }
+          ]
+        },
+        {
+          "categoryId": "cat_02",
+          "name": "Maintenance",
+          "rating": 4,
+          "subsections": [
+            {
+              "subsectionId": "sub_02_01",
+              "name": "Hull",
+              "rating": 4,
+              "details": "Minor corrosion noted on aft section; scheduled for repair.",
+              "images": []
+            }
+          ]
+        }
+      ],
+      "documents": [
+        {
+          "name": "Full PDF",
+          "url": "https://example.com/reports/rep_2025_002/full-report.pdf"
+        }
+      ],
+      "notes": "No immediate action required; monitor corrosion."
+    },
+    "vms-9200671-2025-12-29": {
+      "reportId": "vms-9200671-2025-12-29",
+      "imo": "9200671",
+      "vesselName": "MV Test Ship",
+      "inspectionDate": "2025-12-29",
+      "inspector": "Inspector",
+      "categories": [
+        {
+          "categoryId": "cat-HULL-0",
+          "name": "HULL",
+          "subsections": [
+            {
+              "subsectionId": "vms-9200671-2025-12-29-cat-0-sub-0",
+              "name": "Propeller",
+              "details": "present condition is good updte",
+              "action": "not required",
+              "due_after_weeks": "2",
+              "updated_at": "2025-12-29T15:27:38.296367",
+              "rating": 1,
+              "images": [
+                {
+                  "url": "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1767022049967_Propeller_1.jpg"
+                },
+                {
+                  "url": "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1767022051025_Propeller_2.jpg"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "categoryId": "cat-DECK-1",
+          "name": "DECK",
+          "subsections": [
+            {
+              "subsectionId": "vms-9200671-2025-12-29-cat-1-sub-0",
+              "name": "PILOT LADDERS",
+              "details": "pilot ladders are jammed",
+              "action": "lubrication",
+              "due_after_weeks": "1",
+              "updated_at": "2025-12-29T15:27:50.329462",
+              "rating": 3,
+              "images": [
+                {
+                  "url": "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1767022063330_PILOT_LADDERS_1.jpg"
+                },
+                {
+                  "url": "https://liuwtvylngsksjhrijsi.supabase.co/storage/v1/object/public/inspection_images_bucket/9200671/1767022063638_PILOT_LADDERS_2.jpg"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "edited_by": "qa@example.com",
+      "updated_at": "2026-01-02T08:22:47.715Z"
     }
   }
 }
