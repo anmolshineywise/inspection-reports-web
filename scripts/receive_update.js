@@ -1,10 +1,10 @@
 const http = require('http')
 
 const server = http.createServer(async (req, res) => {
-  if (req.method === 'PUT' && req.url === '/api/update') {
+  if ((req.method === 'PUT' || req.method === 'POST') && req.url === '/api/update') {
     let body = ''
     for await (const chunk of req) body += chunk
-    console.log('[cloudhub-sim] Received PUT /api/update')
+    console.log(`[cloudhub-sim] Received ${req.method} /api/update`)
     try {
       const json = JSON.parse(body)
       console.log('[cloudhub-sim] Payload:', JSON.stringify(json, null, 2))

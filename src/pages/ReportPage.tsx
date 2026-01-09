@@ -29,16 +29,18 @@ export default function ReportPage() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [externalResult, setExternalResult] = useState<{ success: boolean; status?: number; body?: any; error?: string; payload?: any } | null>(null)
-  const [showPayload, setShowPayload] = useState(false)
+  const [directAttempted, setDirectAttempted] = useState<boolean | null>(null)
 
   useEffect(() => {
     if (report) {
       // create a deep copy for editing
       setEdited(JSON.parse(JSON.stringify(report)))
       setStatus((report as any).status || '')
+      setDirectAttempted(null)
     } else {
       setEdited(null)
       setStatus('')
+      setDirectAttempted(null)
     }
   }, [report])
 
@@ -176,6 +178,7 @@ export default function ReportPage() {
     if (!edited || !report) return
     setSaving(true)
     setSaveMsg(null)
+    setDirectAttempted(null)
 
     // Build payload matching the Cloudhub expected format
     const payload: any = {
@@ -190,30 +193,23 @@ export default function ReportPage() {
 
     try {
       const res = await saveReport(report.reportId, payload)
-      // The server returns { success: true, report: ..., external: {...} }
-      // Save external result into state so UI can surface it directly
-      const ext = res && res.external ? res.external : null
-      if (ext) {
-        setExternalResult({ success: !!ext.success, status: ext.status, body: ext.body, error: ext.error, payload: ext.payload })
-      } else {
-        setExternalResult(null)
-      }
+      // Direct forward was attempted (client sends directly)
+      setDirectAttempted(true)
 
-      // Friendly message for the user
-      if (res && res.filename) {
-        setSaveMsg(`Saved as ${res.filename}`)
-      } else if (ext) {
-        setSaveMsg(ext.success ? 'Saved and forwarded to external API' : `Saved locally; external forward failed: ${ext.error || ext.body || ext.status}`)
+      if (res && res.success) {
+        setExternalResult({ success: true, status: res.status, body: res.body })
+        setSaveMsg('Saved and forwarded to external API')
+        // reflect saved changes in the UI and exit edit mode
+        setReport(edited)
+        setEditMode(false)
       } else {
-        setSaveMsg('Saved')
+        setExternalResult({ success: false, error: res.error || res.status, body: res.body })
+        setSaveMsg(`External forward failed: ${res.error || res.status}`)
       }
 
       console.debug('Save response', res)
-
-      // reflect saved changes in the UI and exit edit mode
-      setReport(edited)
-      setEditMode(false)
     } catch (err: any) {
+      setDirectAttempted(false)
       setSaveMsg(`Failed: ${err?.message || String(err)}`)
       setExternalResult({ success: false, error: err?.message || String(err) })
     } finally {
@@ -288,6 +284,25 @@ export default function ReportPage() {
 
           {saveMsg && <div style={{ color: 'green' }}>{saveMsg}</div>}
 
+          {/* Direct-forward indicator */}
+          {directAttempted !== null && (
+            <div style={{ marginLeft: 12, minWidth: 260 }}>
+              {directAttempted ? (
+                externalResult ? (
+                  externalResult.success ? (
+                    <div style={{ color: 'green' }}>🔁 Direct forward attempted — Success ({externalResult.status})</div>
+                  ) : (
+                    <div style={{ color: 'orange' }}>🔁 Direct forward attempted — Failed: {externalResult.error || externalResult.status || (externalResult.body && JSON.stringify(externalResult.body))}</div>
+                  )
+                ) : (
+                  <div style={{ color: 'orange' }}>🔁 Direct forward attempted — Pending</div>
+                )
+              ) : (
+                <div style={{ color: 'gray' }}>Direct forward not attempted</div>
+              )}
+            </div>
+          )}
+
           {externalResult && (
             <div style={{ marginLeft: 12, minWidth: 260 }}>
               {externalResult.success ? (
@@ -296,11 +311,6 @@ export default function ReportPage() {
                 <div style={{ color: 'red' }}>⚠️ External forward failed: {externalResult.error || externalResult.status || (externalResult.body && JSON.stringify(externalResult.body))}</div>
               )}
 
-              <button className="ghost-btn" onClick={() => setShowPayload(s => !s)} style={{ marginTop: 6 }}>{showPayload ? 'Hide forwarded JSON' : 'Show forwarded JSON'}</button>
-
-              {showPayload && (
-                <pre style={{ maxHeight: 300, overflow: 'auto', background: '#f6f6f6', padding: 8, borderRadius: 4, marginTop: 8 }}>{JSON.stringify(externalResult.payload || {}, null, 2)}</pre>
-              )}
             </div>
           )}
         </div>

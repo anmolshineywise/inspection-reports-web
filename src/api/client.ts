@@ -19,14 +19,59 @@ export async function getReport(reportId: string): Promise<Report> {
 }
 
 export async function saveReport(reportId: string, payload: any): Promise<any> {
-  // Use local API for saves to avoid browser CORS issues; the local server forwards to Cloudhub.
-  const res = await fetch(`${BASE}/reports/${encodeURIComponent(reportId)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(payload)
-  })
-  if (!res.ok) throw new Error(`Local API Error: ${res.status}`)
-  return res.json()
+  // Requirement: send payload directly to external Cloudhub via POST
+  const externalUrl = (import.meta.env as any).VITE_EXTERNAL_UPDATE_URL || 'https://vms-data-processing-jgjm9r.5sc6y6-4.usa-e2.cloudhub.io/api/update'
+  console.debug('[saveReport] posting to external', externalUrl)
+
+  const controller = new AbortController()
+  const timeoutMs = Number((import.meta.env as any).VITE_SAVE_TIMEOUT_MS) || 15000
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
+  let outcome: any = null
+  try {
+    const res = await fetch(externalUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    })
+
+    clearTimeout(timeout)
+
+    let body: any
+    try { body = await res.json() } catch (_) { body = await res.text().catch(() => '') }
+
+    outcome = { success: res.ok, status: res.status, body }
+  } catch (err: any) {
+    clearTimeout(timeout)
+    outcome = { success: false, error: err && err.name === 'AbortError' ? 'timeout' : String(err) }
+  }
+
+  // Attempt to persist a debug log to the local server for troubleshooting
+  try {
+    const logPayload = {
+      attemptedAt: new Date().toISOString(),
+      reportId,
+      externalUrl,
+      payload,
+      outcome,
+      client: {
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        origin: typeof location !== 'undefined' ? (location.origin || '') : ''
+      }
+    }
+    // fire-and-forget but await so we can log failure in console
+    const lres = await fetch(`${BASE}/logs/save_attempt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(logPayload)
+    })
+    if (!lres.ok) console.warn('[saveReport] failed to persist client log', lres.status)
+  } catch (logErr) {
+    console.warn('[saveReport] error while writing client log', String(logErr))
+  }
+
+  return outcome
 }
 
 // Fetch vessel details from proxied server endpoint and map to our internal Report shape
