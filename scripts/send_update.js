@@ -1,4 +1,4 @@
-const url = process.env.EXTERNAL_UPDATE_URL || 'https://vms-data-processing-jgjm9r.5sc6y6-4.usa-e2.cloudhub.io/api/update'
+const url = 'https://vms-data-processing-jgjm9r.5sc6y6-4.usa-e2.cloudhub.io/api/update'
 const timeoutMs = Number(process.env.TIMEOUT_MS) || 10000
 
 const payload = {
@@ -50,9 +50,9 @@ async function sendUpdate(retries = 2) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
     try {
-      console.log(`PUT ${url} (attempt ${attempt + 1}/${retries + 1})`)
+      console.log(`POST ${url} (attempt ${attempt + 1}/${retries + 1})`)
       const res = await fetch(url, {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(payload),
         signal: controller.signal
