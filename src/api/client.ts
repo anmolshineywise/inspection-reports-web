@@ -47,29 +47,6 @@ export async function saveReport(reportId: string, payload: any): Promise<any> {
     outcome = { success: false, error: err && err.name === 'AbortError' ? 'timeout' : String(err) }
   }
 
-  // Attempt to persist a debug log to the local server for troubleshooting
-  try {
-    const logPayload = {
-      attemptedAt: new Date().toISOString(),
-      reportId,
-      externalUrl,
-      payload,
-      outcome,
-      client: {
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        origin: typeof location !== 'undefined' ? (location.origin || '') : ''
-      }
-    }
-    // fire-and-forget but await so we can log failure in console
-    const lres = await fetch(`${BASE}/logs/save_attempt`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(logPayload)
-    })
-    if (!lres.ok) console.warn('[saveReport] failed to persist client log', lres.status)
-  } catch (logErr) {
-    console.warn('[saveReport] error while writing client log', String(logErr))
-  }
 
   return outcome
 }
