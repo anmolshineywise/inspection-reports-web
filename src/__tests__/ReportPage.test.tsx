@@ -100,4 +100,30 @@ describe('ReportPage', () => {
     const dueNodes = screen.getAllByText((content, element) => content !== '-' && /2025/.test(content))
     expect(dueNodes.length).toBeGreaterThan(0)
   })
+
+  it('fetches vessel data by IMO when the route reportId is vms-<imo>-<date>', async () => {
+    const fetchSpy = vi.spyOn(client, 'fetchVesselByImo').mockResolvedValue({
+      reportId: 'vms-9200671-2025-12-29',
+      imo: '9200671',
+      vesselName: 'MV VMS Ship',
+      inspector: 'Inspector VMS',
+      inspectionDate: '2025-12-29',
+      categories: []
+    } as any)
+
+    const getSpy = vi.spyOn(client, 'getReport')
+    getSpy.mockClear()
+
+    render(
+      <MemoryRouter initialEntries={["/reports/vms-9200671-2025-12-29"]}>
+        <Routes>
+          <Route path="/reports/:reportId" element={<ReportPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => expect(screen.getByText(/MV VMS Ship/)).toBeInTheDocument())
+    expect(fetchSpy).toHaveBeenCalledWith('9200671')
+    expect(getSpy).not.toHaveBeenCalled()
+  })
 })

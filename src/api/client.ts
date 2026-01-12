@@ -19,7 +19,7 @@ export async function getReport(reportId: string): Promise<Report> {
 }
 
 export async function saveReport(reportId: string, payload: any): Promise<any> {
-  // Requirement: send payload directly to external Cloudhub via POST
+  // Requirement: send payload directly to external Cloudhub via POST, with fallback to local server if blocked
   const externalUrl = (import.meta.env as any).VITE_EXTERNAL_UPDATE_URL || 'https://vms-data-processing-jgjm9r.5sc6y6-4.usa-e2.cloudhub.io/api/update'
   console.debug('[saveReport] posting to external', externalUrl)
 
@@ -47,8 +47,30 @@ export async function saveReport(reportId: string, payload: any): Promise<any> {
     outcome = { success: false, error: err && err.name === 'AbortError' ? 'timeout' : String(err) }
   }
 
+  // If direct forward succeeded, return result
+  if (outcome && outcome.success) {
+    return { success: true, method: 'direct', status: outcome.status, body: outcome.body }
+  }
 
-  return outcome
+  // Otherwise, fallback to local server which will forward server-side
+  try {
+    const lr = await fetch(`${BASE}/reports/${encodeURIComponent(reportId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    let localBody: any
+    try { localBody = await lr.json() } catch (_) { localBody = await lr.text().catch(() => '') }
+
+    if (!lr.ok) {
+      return { success: false, method: 'via-server', forwarded: false, localStatus: lr.status, localBody, originalOutcome: outcome }
+    }
+
+    return { success: true, method: 'via-server', forwarded: true, localStatus: lr.status, localBody, originalOutcome: outcome }
+  } catch (err: any) {
+    return { success: false, method: 'none', error: String(err), originalOutcome: outcome }
+  }
 }
 
 // Fetch vessel details from proxied server endpoint and map to our internal Report shape

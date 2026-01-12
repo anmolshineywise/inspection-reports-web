@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import { getReport, saveReport } from "../api/client";
+import { getReport, saveReport, fetchVesselByImo } from "../api/client";
 import { Report, ImageRef } from "../types";
 import Badge from "../components/Badge";
 import Lightbox from "../components/Lightbox";
@@ -64,6 +64,29 @@ export default function ReportPage() {
 
     if (!reportId) return;
     setLoading(true);
+    setError(null);
+
+    // If this looks like a VMS-generated reportId (vms-<imo>-<date>), extract the IMO
+    // and fetch by IMO only. This prevents sending the full slug to the server on refresh.
+    const vmsMatch = /^vms-(\d+)-/.exec(reportId);
+    if (vmsMatch) {
+      const imo = vmsMatch[1];
+      fetchVesselByImo(imo)
+        .then((r) => {
+          setReport(r);
+          try {
+            const raw = localStorage.getItem(`openSubsections_${r.reportId}`);
+            if (raw) setOpenMap(JSON.parse(raw));
+          } catch (err) {
+            /* ignore */
+          }
+        })
+        .catch((e) => setError(e.message))
+        .finally(() => setLoading(false));
+      return;
+    }
+
+    // Fallback: load a persisted report by its full id
     getReport(reportId)
       .then((r) => {
         setReport(r);
@@ -193,18 +216,30 @@ export default function ReportPage() {
 
     try {
       const res = await saveReport(report.reportId, payload)
-      // Direct forward was attempted (client sends directly)
+      // We attempted a direct forward from the client
       setDirectAttempted(true)
 
       if (res && res.success) {
-        setExternalResult({ success: true, status: res.status, body: res.body })
-        setSaveMsg('Saved and forwarded to external API')
-        // reflect saved changes in the UI and exit edit mode
-        setReport(edited)
-        setEditMode(false)
+        if (res.method === 'direct') {
+          setExternalResult({ success: true, status: res.status, body: res.body })
+          setSaveMsg('Saved and forwarded to external API')
+          // reflect saved changes in the UI and exit edit mode
+          setReport(edited)
+          setEditMode(false)
+        } else if (res.method === 'via-server') {
+          // direct forward failed; server received and forwarded (or attempted)
+          setExternalResult({ success: false, error: res.originalOutcome?.error || res.originalOutcome?.status || 'External failed', body: res.originalOutcome?.body })
+          setSaveMsg('Direct forward failed; saved via server (server forwarded)')
+          setReport(edited)
+          setEditMode(false)
+        } else {
+          // method === 'none'
+          setExternalResult({ success: false, error: res.error })
+          setSaveMsg(`Save failed: ${res.error || 'unknown'}`)
+        }
       } else {
-        setExternalResult({ success: false, error: res.error || res.status, body: res.body })
-        setSaveMsg(`External forward failed: ${res.error || res.status}`)
+        setExternalResult({ success: false, error: res.error || res.localBody || res.localStatus || 'unknown' })
+        setSaveMsg(`Save failed: ${res.error || res.localStatus || 'unknown'}`)
       }
 
       console.debug('Save response', res)
