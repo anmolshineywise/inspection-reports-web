@@ -421,29 +421,7 @@ app.put('/reports/:id', async (req, res) => {
   }
 })
 
-// Receive client-side save attempt logs and persist for debugging
-app.post('/logs/save_attempt', (req, res) => {
-  const body = req.body || {}
-  const reportId = body.reportId || 'unknown'
-  try { fs.mkdirSync(path.join(__dirname, '..', 'logs'), { recursive: true }) } catch (_) {}
-  const safeStamp = new Date().toISOString().replace(/[:.]/g, '-')
-  const filename = `save_attempt_${reportId}_${safeStamp}.json`
-  const outPath = path.join(__dirname, '..', 'logs', filename)
-  try {
-    const entry = {
-      receivedAt: new Date().toISOString(),
-      ip: req.ip,
-      headers: req.headers,
-      body
-    }
-    fs.writeFileSync(outPath, JSON.stringify(entry, null, 2), 'utf-8')
-    console.log(`Saved client log to ${outPath}`)
-    return res.json({ success: true, filename })
-  } catch (err) {
-    console.error('[logs] failed to write save_attempt', err)
-    return res.status(500).json({ success: false, error: String(err) })
-  }
-})
+
 
 const port = process.env.PORT || 3000
 app.listen(port, () => console.log(`Mock API server listening on http://localhost:${port}`))
