@@ -6,7 +6,7 @@ import './styles.css'
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter future={{ v7_startTransition: true }}>
+    <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true }}>
       <App />
     </BrowserRouter>
   </React.StrictMode>
