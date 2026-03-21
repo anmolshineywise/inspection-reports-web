@@ -2,6 +2,7 @@ import React from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
 import SearchPage from './pages/SearchPage'
 import ReportPage from './pages/ReportPage'
+import DemoDownloadPage from './pages/DemoDownloadPage'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
       <main style={{ padding: 16 }}>
         <Routes>
           <Route path="/" element={<SearchPage />} />
+          <Route path="/demo-download" element={<DemoDownloadPage />} />
           <Route path="/reports/:reportId" element={<ReportPage />} />
         </Routes>
       </main>

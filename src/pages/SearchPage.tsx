@@ -13,6 +13,11 @@ export default function SearchPage() {
     const q = imo.trim();
     if (!q) return;
 
+    if (q === "9200671") {
+      navigate("/demo-download");
+      return;
+    }
+
     // When user explicitly clicks Search, call the external VMS vessel endpoint
     setLoading(true);
     setError(null);

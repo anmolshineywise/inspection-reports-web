@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import SearchPage from '../pages/SearchPage'
 import * as client from '../api/client'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 describe('SearchPage', () => {
   it('renders input and search button', () => {
@@ -13,19 +13,39 @@ describe('SearchPage', () => {
 
   it('calls external vessel API on submit', async () => {
     const mockReport = {
-      reportId: 'vms-9200671-23_12_2025',
-      imo: '9200671',
+      reportId: 'vms-1234567-23_12_2025',
+      imo: '1234567',
       vesselName: 'MV Test Ship'
     }
     const fetchSpy = vi.spyOn(client, 'fetchVesselByImo').mockResolvedValue(mockReport as any)
 
     render(<MemoryRouter><SearchPage /></MemoryRouter>)
     const input = screen.getByPlaceholderText('e.g., 1234567')
-    fireEvent.change(input, { target: { value: '9200671' } })
+    fireEvent.change(input, { target: { value: '1234567' } })
     const btn = screen.getByRole('button', { name: /Search/i })
     fireEvent.click(btn)
 
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('9200671'))
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('1234567'))
+  })
+
+  it('redirects IMO 9200671 to demo download page', async () => {
+    const fetchSpy = vi.spyOn(client, 'fetchVesselByImo')
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<SearchPage />} />
+          <Route path="/demo-download" element={<div>Demo Download Page</div>} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const input = screen.getByPlaceholderText('e.g., 1234567')
+    fireEvent.change(input, { target: { value: '9200671' } })
+    fireEvent.click(screen.getByRole('button', { name: /Search/i }))
+
+    await waitFor(() => expect(screen.getByText('Demo Download Page')).toBeInTheDocument())
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('shows No data found message when API returns NOT_FOUND', async () => {
